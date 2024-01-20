@@ -1,0 +1,95 @@
+.\" Copyright (C) 2020 by Alisdair MacLeod <copying@alisdairmacleod.co.uk>
+.\"
+.\" Permission to use, copy, modify, and/or distribute this software for any purpose
+.\" with or without fee is hereby granted.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+.\" REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+.\" AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+.\" INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+.\" LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+.\" OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+.\" PERFORMANCE OF THIS SOFTWARE.
+.Dd July 2, 2020
+.Dt AWS 1
+.Os
+.Sh NAME
+.Nm aws
+.Nd simple secure (-ish) static webserver
+.Sh SYNOPSIS
+.Nm
+.Op Fl c Pa directory
+.Ar hostname ...
+.Sh DESCRIPTION
+.Nm
+serves the files and subdirectories of the directory from which it is run.
+.Pp
+TLS certificates will be automatically sourced from
+.Lk https://letsencrypt.org/ "Let's Encrypt"
+for all hostnames specified when
+.Nm
+is called.
+.Pp
+.Nm
+sets the following HTTP headers for all responses:
+.Bd -literal
+"Content-Security-Policy": "default-src 'none'; style-src 'self'; img-src 'self'; object-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; plugin-types application/pdf"
+"Referrer-Policy": "no-referrer"
+"Strict-Transport-Security": "max-age=63072000; includeSubDomains"
+"X-Content-Type-Options": "nosniff"
+"X-Frame-Options": "DENY"
+"X-XSS-Protection": "1; mode=block"
+.Ed
+.Pp
+Further to this it applies a Modern TLS config
+.Pf (
+.Lk https://wiki.mozilla.org/Security/Server_Side_TLS "as defined by mozilla"
+.Ns ) and a fairly restrictive set of HTTP security headers.
+.Pp
+Whilst running aws will log any errors that occur to the standard error stream.
+It will also log successful connections to the standard output stream.
+These successful connection log messages follow the
+.Lk https://httpd.apache.org/docs/current/logs.html#combined "Apache Combined Log Format"
+so they can be analysed using any tools that can accept such a log format.
+.Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl c Ar directory
+Use the specified directory to store generated certificates in.
+If the directory does not exist then it will be created with the mode 700.
+By default the directory used is
+.Pa ../certs
+.Ns .
+.Ed
+.Sh EXIT STATUS
+If no hostname is specified then
+.Nm
+will exit 2.
+.Pp
+For all other errors it will exit 1.
+.Sh EXAMPLES
+Serve
+.Pa /var/www/htdocs
+as
+.Em www.alisdairmacleod.co.uk
+.Ns :
+.Pp
+.Dl # cd /var/www/htdocs && aws www.alisdairmacleod.co.uk
+.Pp
+Multiple hostnames should be space delimited:
+.Pp
+.Dl # aws www.alisdairmacleod.co.uk www.alisdairmacleod.com
+.Pp
+Using
+.Pa /var/certs
+as the directory to store certificates:
+.Pp
+.Dl # aws -c /var/certs www.alisdairmacleod.co.uk
+.Pp
+.Sh BUGS
+It might be possible to put certificates into the certificate directory to encourage
+.Nm
+to use the specified certificates rather than having ones generated.
+.Sh SECURITY CONSIDERATIONS
+.Nm
+must have access to ports 80 and 443 and so likely will have to be run as root.
